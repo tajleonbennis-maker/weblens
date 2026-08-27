@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebLens · 交互式网络空间测绘</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:#081018;color:#d7e3f4}
+*{box-sizing:border-box}
+body{margin:0;display:flex;height:100vh;overflow:hidden}
+#side{width:420px;min-width:420px;background:#0c1626;border-right:1px solid #1c2c44;display:flex;flex-direction:column}
+.brand{padding:14px 16px 10px;border-bottom:1px solid #1c2c44}
+.brand h1{margin:0;font-size:16px;color:#7dd3fc;display:flex;align-items:center;gap:6px}
+.brand .sub{font-size:11px;color:#64748b;margin-top:2px}
+#stats{display:flex;gap:6px;margin-top:10px}
+.stat{flex:1;background:#0d1b2e;border:1px solid #1e3a5f;border-radius:8px;padding:6px 4px;text-align:center}
+.stat b{display:block;font-size:15px;color:#67e8f9;line-height:1.2}
+.stat span{font-size:9.5px;color:#64748b}
+.stat.hot b{color:#fb7185}
+#searchWrap{padding:8px 12px 4px}
+#search{width:100%;padding:7px 10px;border-radius:8px;border:1px solid #274060;background:#0a1424;color:#d7e3f4;font-size:12px;outline:none}
+#search::placeholder{color:#4a5d78}
+#search:focus{border-color:#3b82f6}
+#customWrap{padding:8px 12px 0;display:flex;gap:6px}
+#customInput{flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid #315175;background:#0d1b2e;color:#d7e3f4;font-size:11.5px;outline:none}
+#customInput::placeholder{color:#4a5d78}
+#customInput:focus{border-color:#6366f1}
+#customOps{display:flex;gap:4px}
+#customOps .btn{padding:5px 8px;font-size:11px}
+.custom-hint{font-size:9.5px;color:#4a5d78;padding:4px 12px 0}
+#filters{padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #1c2c44}
+.chip{padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;border:1px solid #274060;color:#94a3b8;background:transparent}
+.chip.on{background:#1d4ed8;border-color:#3b82f6;color:#fff}
+#list{flex:1;overflow-y:auto;padding:6px 10px}
+.item{padding:9px 11px;border-radius:9px;cursor:pointer;margin:2px 0;border:1px solid transparent}
+.item:hover{background:#12213a}
+.item.on{background:#13294a;border-color:#2a4a78}
+.item .u{font-size:12.5px;color:#dbe8fa;font-family:ui-monospace,monospace;word-break:break-all}
+.item .tags{margin-top:3px}
+.tag-mini{display:inline-block;padding:0 6px;border-radius:7px;font-size:9.5px;margin:1px 3px 1px 0;background:#0d1b2e;border:1px solid #1e3a5f;color:#7dd3fc}
+.item .m{font-size:10.5px;color:#64748b;margin-top:3px}
+.item .port{color:#94a3b8;margin-left:4px;font-family:ui-monospace,monospace}
+.item .title{font-size:10.5px;color:#475569;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{display:inline-block;padding:0 6px;border-radius:7px;font-size:9.5px;margin-left:5px;font-family:ui-monospace,monospace}
+.st-ok{background:#1d3b33;color:#4ade80}
+.st-warn{background:#3b2f1d;color:#fbbf24}
+.st-dead{background:#3b1d1d;color:#fb7185}
+.st-grey{background:#1e293b;color:#64748b}
+.item.dead{opacity:.55}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;margin-left:6px}
+.b-proxy{background:#1d3b33;color:#4ade80}
+.b-bt{background:#3b2f1d;color:#fbbf24}
+.b-web{background:#1e293b;color:#94a3b8}
+.b-ai{background:#312e81;color:#a5b4fc}
+.exp{background:#3b1d1d;color:#fb7185}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #1c2c44;background:#0a1322}
+#cur{flex:1;font-size:12px;color:#67e8f9;font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{padding:5px 12px;border-radius:7px;font-size:11.5px;cursor:pointer;border:1px solid #315175;background:#12213a;color:#cbd5e1}
+.btn:hover{background:#1a2c4a}
+.btn.danger{background:#3b1d1d;border-color:#7f1d1d;color:#fb7185}
+.btn.primary{background:#1d4ed8;border-color:#3b82f6;color:#fff}
+#body{flex:1;display:flex;min-height:0}
+#viewport{flex:1;position:relative;overflow:auto;background:#0d1628;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+#guide{padding:26px 28px;color:#94a3b8;display:block;overflow:auto}
+#guide h2{color:#7dd3fc;font-size:16px;margin:0 0 6px}
+#guide .lead{font-size:12.5px;color:#94a3b8;line-height:1.7;margin:0 0 16px}
+.hero{padding:34px 20px 10px;text-align:center}
+.hero-logo{font-size:30px;font-weight:800;color:#7dd3fc;letter-spacing:1px}
+.hero-tagline{font-size:12.5px;color:#64748b;margin:8px 0 22px}
+.hero-search{display:flex;gap:8px;max-width:680px;margin:0 auto}
+.hero-search input{flex:1;padding:13px 16px;border-radius:10px;border:1px solid #3b82f6;background:#0a1424;color:#d7e3f4;font-size:14.5px;outline:none}
+.hero-search input::placeholder{color:#4a5d78}
+.hero-search input:focus{border-color:#7dd3fc;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+.btn.hero-btn{padding:13px 26px;border-radius:10px;font-size:14px;background:#1d4ed8;border-color:#3b82f6;color:#fff}
+.btn.hero-btn:hover{background:#2563eb}
+.hero-hint{font-size:11px;color:#4a5d78;margin-top:12px}
+.hero-demos{display:flex;gap:14px;max-width:760px;margin:30px auto 0;flex-wrap:wrap;justify-content:center}
+.demo-card{flex:1;min-width:200px;background:#0d1b2e;border:1px solid #1e3a5f;border-radius:12px;padding:16px 18px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.demo-card:hover{border-color:#3b82f6;background:#12213a}
+.demo-card .demo-ico{font-size:22px}
+.demo-card .demo-title{font-size:13.5px;color:#dbe8fa;font-weight:700;margin:6px 0 6px}
+.demo-card .demo-desc{font-size:11px;color:#64748b;line-height:1.6}
+.demo-card .demo-try{font-size:11px;color:#7dd3fc;margin-top:8px}
+.hero-foot{text-align:center;font-size:10.5px;color:#4a5d78;margin:26px 0 6px}
+#globalRow{display:flex;gap:8px}
+#globalInput{flex:1;padding:10px 12px;border-radius:9px;border:1px solid #3b82f6;background:#0a1424;color:#d7e3f4;font-size:13px;outline:none}
+#globalInput::placeholder{color:#5b7290}
+#globalInput:focus{border-color:#7dd3fc}
+#globalExamples{margin-top:8px;font-size:10.5px;color:#5b7290;line-height:1.7}
+#globalThinking{display:none;margin-top:10px;font-size:12px;color:#67e8f9}
+#globalResult{display:none;margin-top:12px;border:1px solid #1e3a5f;border-left:3px solid #a5b4fc;border-radius:8px;background:#0d1b2e;padding:12px 14px}
+#globalAnswer{font-size:13px;color:#dbe8fa;line-height:1.8;white-space:pre-wrap}
+#globalSteps{margin-top:8px;font-size:11px;color:#64748b;line-height:1.7}
+#globalSteps .ok{color:#4ade80}
+#globalSteps .bad{color:#fb7185}
+#guide .steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+#guide .step-card{flex:1;min-width:150px;background:#0d1b2e;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px}
+#guide .step-card .n{font-size:11px;color:#fb7185;font-weight:700}
+#guide .step-card .t{font-size:12.5px;color:#dbe8fa;margin:4px 0}
+#guide .step-card .d{font-size:10.5px;color:#64748b;line-height:1.5}
+#guide .value{background:#0d1b2e;border:1px solid #1e3a5f;border-left:3px solid #4ade80;border-radius:8px;padding:10px 14px;font-size:11.5px;color:#94a3b8;line-height:1.7}
+#guide .value b{color:#4ade80}
+#assetBar{display:none;padding:12px 18px;background:#0d1a2e;border-bottom:1px solid #1c2c44}
+#assetBar .ab-url{font-size:12.5px;color:#67e8f9;font-family:ui-monospace,monospace;word-break:break-all;margin-bottom:4px}
+#assetBar .ab-meta{font-size:11px;color:#94a3b8;word-break:break-all}
+#assetBar .ab-ops{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ai-wrap{display:flex;gap:6px;margin-top:10px}
+#aiInput{flex:1;padding:7px 10px;border-radius:8px;border:1px solid #274060;background:#0a1424;color:#d7e3f4;font-size:12px;outline:none}
+#aiInput::placeholder{color:#4a5d78}
+#aiInput:focus{border-color:#3b82f6}
+#aiResult{display:none;margin-top:10px;border:1px solid #1e3a5f;border-left:3px solid #a5b4fc;border-radius:8px;background:#0d1b2e;padding:10px 12px}
+#aiResult .ai-answer{font-size:12px;color:#dbe8fa;line-height:1.7;white-space:pre-wrap}
+#aiResult .ai-steps{margin-top:8px;font-size:10.5px;color:#64748b;line-height:1.6}
+#aiResult .ai-steps .ok{color:#4ade80}
+#aiResult .ai-steps .bad{color:#fb7185}
+#aiThinking{display:none;margin-top:10px;font-size:11.5px;color:#67e8f9}
+#intelBox{display:none;padding:10px 18px;background:#0d1a2e;border-bottom:1px solid #1c2c44}
+.intel-card{margin:6px 0;padding:8px 12px;border-radius:8px;background:#091421;border:1px solid #1c2c44;font-size:11.5px;line-height:1.6}
+.intel-card .k{font-weight:700;margin-right:8px}
+.intel-card .v{color:#bcd0ea;word-break:break-all}
+.intel-card .tag{display:inline-block;padding:1px 8px;border-radius:9px;font-size:10px;margin:1px 3px 1px 0;background:#12213a;border:1px solid #274060;color:#94a3b8}
+.intel-card .tag.hl{background:#312e81;border-color:#6366f1;color:#a5b4fc}
+.intel-card .tag.warn{background:#3b1d1d;border-color:#7f1d1d;color:#fb7185}
+.ic-title .k{color:#7dd3fc}
+.ic-api .k{color:#a5b4fc}
+.ic-fp .k{color:#4ade80}
+.ic-exp .k{color:#fb7185}
+.ic-doors .k{color:#fbbf24}
+.door-btn{padding:3px 10px;border-radius:6px;font-size:10.5px;cursor:pointer;border:1px solid #315175;background:#12213a;color:#cbd5e1;margin:2px 4px 2px 0}
+.door-btn:hover{background:#1d4ed8;border-color:#3b82f6;color:#fff}
+.door-meta{color:#64748b;font-size:10px;margin-left:4px}
+#contentTabs{display:none;gap:6px;padding:8px 14px 0;border-bottom:1px solid #1c2c44;background:#0d1a2e}
+.tab{padding:4px 12px;border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;border:1px solid #274060;border-bottom:none;color:#94a3b8;background:transparent}
+.tab.on{background:#13294a;color:#67e8f9;border-color:#3b82f6}
+#domPanel{flex:1;overflow:auto;padding:12px 16px;display:none}
+#textPanel{flex:1;overflow:auto;padding:12px 16px;display:none}
+#linksPanel{flex:1;overflow:auto;padding:12px 16px;display:none}
+pre{white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,monospace;font-size:11px;line-height:1.55;color:#bcd0ea;background:#091421;padding:12px;border-radius:8px;border:1px solid #1c2c44;margin:0}
+#textPre{font-size:12.5px;line-height:1.7}
+.links-list{display:flex;flex-direction:column;gap:6px}
+.links-list a{color:#7dd3fc;font-size:12px;font-family:ui-monospace,monospace;word-break:break-all;text-decoration:none;padding:6px 10px;background:#0d1b2e;border:1px solid #1e3a5f;border-radius:7px}
+.links-list a:hover{border-color:#3b82f6;background:#13294a}
+.links-empty{color:#64748b;font-size:11.5px;padding:10px}
+#trace{width:340px;min-width:340px;background:#0c1626;border-left:1px solid #1c2c44;display:flex;flex-direction:column}
+#trace .h{padding:10px 14px;font-size:12px;color:#7dd3fc;border-bottom:1px solid #1c2c44;font-weight:600}
+#steps{flex:1;overflow-y:auto;padding:8px 10px}
+.step{padding:6px 8px;border-radius:7px;font-size:11px;color:#94a3b8;border-left:2px solid #315175;margin:4px 0;background:#0d1b2e}
+.step .a{color:#67e8f9;font-weight:600}
+.step .t{color:#64748b;font-size:10px;margin-top:2px}
+#tools{padding:10px 14px;border-top:1px solid #1c2c44;display:flex;gap:6px;flex-wrap:wrap}
+.loading{opacity:.5;pointer-events:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#24364f;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+@media(max-width:900px){#side{width:100%;min-width:100%;height:34vh;border-right:none;border-bottom:1px solid #1c2c44}body{flex-direction:column}}
+</style></head><body>
+<div id="side">
+  <div class="brand">
+    <h1>🛰 WebLens 交互式测绘</h1>
+    <div class="sub">网络空间资产测绘 · 扫描 → 真身浏览 → 交互留痕 → 情报报告</div>
+    <div id="stats">
+      <div class="stat"><b id="nTotal">0</b><span>总资产</span></div>
+      <div class="stat"><b id="nAI">0</b><span>AI 资产</span></div>
+      <div class="stat hot"><b id="nExp">0</b><span>暴露资产</span></div>
+      <div class="stat"><b id="nGeo">0</b><span>归属国家</span></div>
+    </div>
+  </div>
+  <div id="customWrap">
+    <input id="customInput" placeholder="🎯 输入要测绘的资产：https://example.com 或 1.2.3.4:8080">
+    <div id="customOps">
+      <button class="btn primary" id="btnCustom">测绘</button>
+      <button class="btn" id="btnCustomAI" title="打开后自动用 AI 出一份资产摘要">🤖 自动测绘</button>
+    </div>
+  </div>
+  <div class="custom-hint">输入任意网址/IP，平台直接为它建立可操作会话（真身浏览 + AI 一句话驱动）</div>
+  <div id="searchWrap"><input id="search" placeholder="🔍 搜索资产列表：IP / 域名 / 端口 / 国家 / ISP / 技术栈…"></div>
+  <div class="filters" id="chips"></div>
+  <div id="list"></div>
+</div>
+<div id="main">
+  <div id="top">
+    <span id="cur">未选择资产 — 从左侧选择一个目标开始测绘</span>
+    <span class="sp" style="flex:1"></span>
+    <button class="btn" id="btnGuideTop">❓ 使用指南</button>
+    <button class="btn danger" id="btnCloseTop" style="display:none">✕ 关闭会话</button>
+  </div>
+  <div id="body">
+    <div id="viewport">
+      <div id="guide">
+        <div class="hero">
+          <div class="hero-logo">🛰 WebLens</div>
+          <div class="hero-tagline">AI 驱动的交互式网络空间测绘 · 公开网络 + 封闭社交平台</div>
+          <div class="hero-search">
+            <input id="globalInput" placeholder="搜索资产 / 域名 / IP，或直接说任务，例如：在 fofa 查有多少个宝塔面板资产">
+            <button class="btn hero-btn" id="btnGlobalAsk">搜索</button>
+          </div>
+          <div class="hero-hint">支持：FOFA 暴露面测绘 · 网站真身浏览 · 网页/公众号文章下载（FreeBuf / 微信）</div>
+        </div>
+        <div class="hero-demos">
+          <div class="demo-card" onclick="runDemo('在 fofa 上查有多少个宝塔面板资产')">
+            <div class="demo-ico">🛰</div>
+            <div class="demo-title">FOFA 暴露面测绘</div>
+            <div class="demo-desc">一句话查全网资产数量：互联网上有多少宝塔面板、Open WebUI、代理节点…</div>
+            <div class="demo-try">试试：在 fofa 查宝塔面板 →</div>
+          </div>
+          <div class="demo-card" onclick="runDemo('下载这篇文章 https://www.freebuf.com/articles/497361.html')">
+            <div class="demo-ico">📰</div>
+            <div class="demo-title">网页文章下载</div>
+            <div class="demo-desc">真身浏览任意网页：FreeBuf、CSDN、企业官网，抓取正文与情报</div>
+            <div class="demo-try">试试：下载 FreeBuf 文章 →</div>
+          </div>
+          <div class="demo-card" onclick="runDemo('下载公众号文章《下一代 AI SOC 长什么样：SOC 版的 Codex》')">
+            <div class="demo-ico">📱</div>
+            <div class="demo-title">公众号文章（TikHub）</div>
+            <div class="demo-desc">封闭平台突破：微信公众号文章全文获取，搜标题即可下载</div>
+            <div class="demo-try">试试：下载公众号文章 →</div>
+          </div>
+        </div>
+        <div id="globalThinking">🤖 正在思考并执行…（可能需要 10-60 秒）</div>
+        <div id="globalResult"><div id="globalAnswer"></div><div id="globalSteps"></div></div>
+        <div class="hero-foot">🗺 左侧为搬瓦工 AS21887 资产全景 · 点击资产可真身浏览 · 操作自动留痕可导出情报报告</div>
+      </div>
+      <div id="assetBar">
+        <div class="ab-url" id="abUrl"></div>
+        <div class="ab-meta" id="abMeta"></div>
+        <div class="ab-ops">
+          <button class="btn primary" id="btnScan">🔄 重新抓取内容</button>
+          <button class="btn" id="btnTop">⬆ 顶部</button>
+          <button class="btn" id="btnBottom">⬇ 底部</button>
+          <button class="btn" id="btnExport">💾 导出轨迹</button>
+          <button class="btn" id="btnReport">📄 生成情报报告</button>
+        </div>
+        <div class="ai-wrap">
+          <input id="aiInput" placeholder="🧠 AI 测绘助手：用一句话描述你想对这个目标做什么（例：看看这个登录页有哪些字段 / 找出页面上的 API 端点）">
+          <button class="btn primary" id="btnAsk">执行</button>
+        </div>
+        <div id="aiThinking">🤖 正在思考并执行…（可能需要 20-60 秒）</div>
+        <div id="aiResult"><div class="ai-answer" id="aiAnswer"></div><div class="ai-steps" id="aiSteps"></div></div>
+      </div>
+      <div id="intelBox">
+        <div class="intel-card ic-title"><span class="k">📌 标题</span><span class="v" id="icTitle"></span></div>
+        <div class="intel-card ic-api"><span class="k">🔗 API 端点</span><span class="v" id="icApi"></span></div>
+        <div class="intel-card ic-fp"><span class="k">🧬 技术指纹</span><span class="v" id="icFp"></span></div>
+        <div class="intel-card ic-exp"><span class="k">🛡 暴露点</span><span class="v" id="icExp"></span></div>
+        <div class="intel-card ic-doors"><span class="k">🚪 登录 / 注册入口</span><span class="v" id="icDoors"></span></div>
+      </div>
+      <div id="contentTabs">
+        <button class="tab on" id="tabText">📄 文本</button>
+        <button class="tab" id="tabLinks">🔗 链接</button>
+        <button class="tab" id="tabHtml">⛁ HTML 源码</button>
+      </div>
+      <div id="textPanel"><pre id="textPre"></pre></div>
+      <div id="linksPanel"><div class="links-list" id="linksBox"></div></div>
+      <div id="domPanel"><pre id="domPre"></pre></div>
+    </div>
+    <div id="trace">
+      <div class="h">📋 操作轨迹 (L4)</div>
+      <div id="steps"><div class="step">等待操作…</div></div>
+      <div id="tools">
+        <button class="btn" id="btnScan2">🔄 刷新</button>
+        <button class="btn" id="btnTop2">⬆</button>
+        <button class="btn" id="btnBottom2">⬇</button>
+        <button class="btn" id="btnExport2">💾 轨迹</button>
+        <button class="btn" id="btnReport2">📄 报告</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let assets=[], cur=null, curUrl='', loading=false, lastHtml='';
+const $=id=>document.getElementById(id);
+async function api(path, body){
+  const opt={method: body?'POST':'GET', headers:{'Content-Type':'application/json'}};
+  if(body) opt.body=JSON.stringify(body);
+  const r=await fetch(path, opt);
+  if(!r.ok) throw new Error((await r.text()).slice(0,200));
+  return r.json();
+}
+async function loadAssets(){
+  try{
+    const d=await api('/api/map/assets');
+    assets=d.assets||[];
+    renderStats(); renderChips(); renderList();
+  }catch(e){ $('stat').textContent='加载失败: '+e.message; }
+}
+function renderStats(){
+  const ai=assets.filter(a=>a.aiChat).length;
+  const exp=assets.filter(a=>a.exposures>0).length;
+  const geos=new Set(assets.map(a=>a.countryCode).filter(Boolean));
+  $('nTotal').textContent=assets.length;
+  $('nAI').textContent=ai;
+  $('nExp').textContent=exp;
+  $('nGeo').textContent=geos.size;
+}
+let curCat='';
+function renderChips(){
+  const cats=['全部','暴露资产','AI 资产','代理端口','宝塔面板','普通Web'];
+  const box=$('chips'); box.innerHTML='';
+  cats.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='chip'+(curCat===c?' on':''); b.textContent=c;
+    b.onclick=()=>{curCat=c;renderChips();renderList();};
+    box.appendChild(b);
+  });
+}
+function catOf(a){
+  const p=(a.port||'').toString();
+  if(['2095','2096','8443','8880','2082','2053','2086','2087','2083'].includes(p)) return '代理端口';
+  if(['888','8888'].includes(p)) return '宝塔面板';
+  return '普通Web';
+}
+function renderList(){
+  const list=$('list');
+  const q=($('search').value||'').trim().toLowerCase();
+  let items=assets.filter(a=>{
+    if(curCat==='暴露资产' && a.exposures<=0) return false;
+    if(curCat==='AI 资产' && !a.aiChat) return false;
+    if(curCat==='代理端口' && catOf(a)!=='代理端口') return false;
+    if(curCat==='宝塔面板' && catOf(a)!=='宝塔面板') return false;
+    if(curCat==='普通Web' && catOf(a)!=='普通Web') return false;
+    if(q){
+      const hay=(a.url+' '+(a.title||'')+' '+(a.country||'')+' '+(a.isp||'')+' '+(a.countryCode||'')+' '+a.tech).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  // 排序：活资产(200/403) > 404 > 死资产；同等级暴露/AI 优先
+  const lv=a=>a.httpStatus===200?500:(a.httpStatus===403||a.httpStatus===400||a.httpStatus===506)?400:(a.httpStatus===404?200:0);
+  items.sort((x,y)=>{
+    const a=(lv(x))+((x.exposures>0?100:0)+(x.aiChat?10:0));
+    const b=(lv(y))+((y.exposures>0?100:0)+(y.aiChat?10:0));
+    return b-a;
+  });
+  list.innerHTML=items.map(a=>{
+    const cat=catOf(a);
+    const st=a.httpStatus?statusBadge(a.httpStatus):'';
+    const badge=cat==='代理端口'?'<span class="badge b-proxy">代理</span>':cat==='宝塔面板'?'<span class="badge b-bt">宝塔</span>':'<span class="badge b-web">Web</span>';
+    const ai=a.aiChat?'<span class="badge b-ai">AI</span>':'';
+    const exp=a.exposures>0?'<span class="badge exp">⚠ 暴露 '+a.exposures+'</span>':'';
+    const port=a.port?'<span class="port">:'+a.port+'</span>':'';
+    const dead=a.httpStatus===undefined||a.httpStatus===0?' dead':'';
+    const techs=(a.tech||'').split('|').filter(Boolean).slice(0,4);
+    const tags=techs.map(t=>'<span class="tag-mini">'+esc(t)+'</span>').join('');
+    const flag=a.countryCode?flagEmoji(a.countryCode)+' '+a.country:'';
+    const isp=a.isp?(' · '+a.isp):'';
+    const title=a.title?'<div class="title">'+esc(a.title)+'</div>':'';
+    return `<div class="item${curUrl===a.url?' on':''}${dead}" data-url="${a.url}">
+      <div class="u">${a.url}${st}${badge}${ai}${exp}</div>
+      ${tags?'<div class="tags">'+tags+'</div>':''}
+      <div class="m">${flag||'🌐 未知归属'}${isp}${port}</div>${title}</div>`;
+  }).join('')||'<div class="step">无匹配资产</div>';
+  list.querySelectorAll('.item').forEach(el=>el.onclick=()=>openAsset(el.dataset.url));
+}
+function statusBadge(code){
+  if(code===200) return '<span class="status st-ok">200 OK</span>';
+  if(code===403||code===506) return '<span class="status st-warn">'+code+'</span>';
+  if(code===400) return '<span class="status st-warn">400</span>';
+  if(code===404) return '<span class="status st-grey">404</span>';
+  return '<span class="status st-warn">'+code+'</span>';
+}
+function flagEmoji(cc){
+  const map={US:'🇺🇸',AE:'🇦🇪',CN:'🇨🇳',JP:'🇯🇵',SG:'🇸🇬',HK:'🇭🇰',DE:'🇩🇪',NL:'🇳🇱',GB:'🇬🇧',CA:'🇨🇦',FR:'🇫🇷',AU:'🇦🇺',KR:'🇰🇷',TW:'🇹🇼'};
+  return map[cc]||'🌐';
+}
+function assetMeta(url){
+  return assets.find(a=>a.url===url)||null;
+}
+// Normalize a user-supplied asset URL: add scheme, handle IP:port, strip junk.
+function normUrl(s){
+  s=(s||'').trim();
+  if(!s) return '';
+  if(!/^https?:\/\//i.test(s)) s='https://'+s;
+  try{
+    const u=new URL(s);
+    if(!u.hostname) return '';
+    return u.href.replace(/\/$/,'');
+  }catch(e){ return ''; }
+}
+async function openCustomUrl(autoSurvey){
+  const u=normUrl($('customInput').value);
+  if(!u){
+    $('customInput').placeholder='⚠ 地址无效，示例: https://example.com 或 1.2.3.4:8080';
+    return;
+  }
+  $('customInput').value=u;
+  // If the asset is already in the scanned list, open it normally.
+  if(assetMeta(u)){ openAsset(u); return; }
+  // Custom target: "装上手脚" — create a live session, capture intel, then
+  // optionally let the AI produce a survey of the asset.
+  if(autoSurvey){
+    await openCustomWithAI(u);
+  } else {
+    openAsset(u);
+  }
+}
+async function openCustomWithAI(u){
+  if(loading) return;
+  curUrl=u; cur=null; lastHtml=''; renderList();
+  hideAll();
+  $('cur').textContent='正在为 '+u+' 建立测绘会话…'; $('guide').style.display='block';
+  loading=true; document.body.classList.add('loading');
+  try{
+    const d=await api('/api/live/open',{url:u});
+    cur=d.session;
+    $('cur').textContent=d.session.current||u;
+    $('btnCloseTop').style.display='';
+    addStep({a:'open',t:'打开自定义资产 '+u,url:d.session.current});
+    loading=false; document.body.classList.remove('loading');
+    showAssetBar(d.session.current||u);
+    await act('snapshot',{findKeys:false});
+    // AI survey
+    $('aiInput').value='用 AI 帮我快速测绘一下这个资产：它是什么网站/系统，用了什么技术，有哪些暴露点和登录注册入口，值得关注什么？';
+    await askAgent();
+    $('aiInput').value='';
+  }catch(e){ $('cur').textContent='打开失败: '+e.message; loading=false; document.body.classList.remove('loading'); }
+}
+$('btnCustom').onclick=()=>openCustomUrl(false);
+$('btnCustomAI').onclick=()=>openCustomUrl(true);
+$('customInput').addEventListener('keydown',e=>{ if(e.key==='Enter') openCustomUrl(false); });
+
+// ---- Global task input (landing view) ----
+async function askGlobal(){
+  const prompt=($('globalInput').value||'').trim();
+  if(!prompt||loading) return;
+  $('globalThinking').style.display='block';
+  $('globalResult').style.display='none';
+  // 1. If the prompt contains a URL, open that asset and run the task in its
+  //    page context (best result).
+  const m=prompt.match(/https?:\/\/[^\s，。、"'<>]+/i);
+  if(m){
+    const u=normUrl(m[0]);
+    if(u){
+      if(assetMeta(u)){ await openAsset(u); }
+      else { await openCustomWithAI(u); }
+      // feed the remaining task text into the per-asset AI box
+      const extra=prompt.replace(m[0],'').replace(/^(下载|抓取|看看|查看|分析|打开|访问)?\s*/,'').trim();
+      if(extra){
+        $('aiInput').value=extra;
+        await askAgent();
+        $('aiInput').value='';
+      }
+      $('globalThinking').style.display='none';
+      return;
+    }
+  }
+  // 2. No URL -> global (session-less) ask: fofa queries / plain answers.
+  await globalAsk(prompt);
+}
+async function globalAsk(prompt){
+  loading=true; document.body.classList.add('loading');
+  try{
+    const d=await api('/api/live/ask',{url:'',prompt});
+    $('globalAnswer').textContent='🤖 '+(d.answer||'(无回答)');
+    window._lastSteps=d.steps||[];
+    const st=document.getElementById('globalSteps');
+    st.innerHTML=(d.steps||[]).map(s=>renderStep(s)).join('');
+    $('globalResult').style.display='block';
+  }catch(e){
+    $('globalAnswer').textContent='执行失败: '+e.message;
+    $('globalResult').style.display='block';
+  }
+  $('globalThinking').style.display='none';
+  loading=false; document.body.classList.remove('loading');
+}
+// Render one agent step; supports fofa / tikhub / generic ops.
+function renderStep(s){
+  const cls=s.ok?'ok':'bad';
+  let inner='';
+  if(s.kind==='mp_detail'){
+    inner='<b>📄 '+esc(s.title)+'</b> · '+esc(s.nickname||s.author||'')+' · '+esc(s.create_time||'')+'<br>';
+    inner+='<button class="door-btn" onclick="downloadArticle()">⬇ 下载原文 (.md)</button> ';
+    inner+='<button class="door-btn" onclick="toggleArticle(this)">👁 预览</button>';
+    inner+='<div class="article-preview" style="display:none;margin-top:6px;color:#94a3b8;font-size:11px;white-space:pre-wrap;max-height:260px;overflow:auto">'+esc((s.summary||s.content||'').slice(0,3000))+'</div>';
+  } else if(s.kind==='mp_search'){
+    const items=(s.items||[]).map(it=>{
+      return '<div style="margin:3px 0">· <b>'+esc(it.title||'')+'</b> <span style="color:#64748b">['+esc(it.source||'')+']</span></div>';
+    }).join('');
+    inner='<b>🔎 公众号搜索命中 '+(s.count||0)+' 条</b><br>'+items;
+  } else if(s.total!==undefined){
+    inner='<b>🔎 '+esc(s.query||s.op)+'</b> · 总数 '+s.total;
+    if(s.sample&&s.sample.length) inner+='<br>样例: '+s.sample.slice(0,5).map(x=>esc(x.host||'')).join(' · ');
+  } else {
+    inner=s.op+(s.error?' ✗ '+esc(s.error):'');
+  }
+  return '<div class="'+cls+'" style="margin:6px 0">· '+inner+'</div>';
+}
+function downloadArticle(){
+  const s=(window._lastSteps||[]).find(x=>x.kind==='mp_detail');
+  if(!s||!s.content) return;
+  const md='# '+(s.title||'')+'\n\n> 公众号：'+(s.nickname||'')+' ｜ 作者：'+(s.author||'')+' ｜ 发布时间：'+(s.create_time||'')+'\n\n---\n\n'+s.content+'\n';
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(s.title||'article').replace(/[\\/:*?"<>|]/g,'_')+'.md'; a.click();
+}
+function toggleArticle(btn){
+  const p=btn.nextElementSibling;
+  if(p) p.style.display=(p.style.display==='none')?'block':'none';
+}
+$('btnGlobalAsk').onclick=askGlobal;
+$('globalInput').addEventListener('keydown',e=>{ if(e.key==='Enter') askGlobal(); });
+// demo cards: fill the search box and run
+function runDemo(p){
+  $('globalInput').value=p;
+  askGlobal();
+}
+function hideAll(){
+  ['guide','assetBar','intelBox','contentTabs','domPanel','textPanel','linksPanel'].forEach(id=>$(id).style.display='none');
+  $('domPre').textContent='';
+  $('textPre').textContent='';
+  $('linksBox').innerHTML='';
+}
+function showAssetBar(url){
+  hideAll();
+  const a=assetMeta(curUrl);
+  $('abUrl').textContent='🌐 '+url;
+  let meta=[];
+  if(a){
+    if(a.country) meta.push(flagEmoji(a.countryCode)+' '+a.country);
+    if(a.isp) meta.push(a.isp);
+    if(a.port) meta.push('端口 '+a.port);
+    if(a.asn) meta.push(a.asn);
+    if(a.tech) meta.push('技术栈: '+a.tech);
+    if(a.title) meta.push('标题: '+a.title);
+  }
+  $('abMeta').textContent=meta.join('  ·  ')||'🎯 自定义目标 · 已建立可操作会话（归属/技术栈见下方实时情报）';
+  $('assetBar').style.display='block';
+  $('intelBox').style.display='block';
+  $('contentTabs').style.display='flex';
+  switchContentView('text');
+  renderText();
+}
+function renderIntel(intel){
+  if(!intel) return;
+  $('icTitle').textContent=intel.title||'(无标题)';
+  const apis=(intel.apis||[]).map(x=>'<span class="tag hl">'+esc(x)+'</span>').join('')||'<span style="color:#64748b">未发现</span>';
+  $('icApi').innerHTML=apis;
+  const fps=(intel.fingerprints||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join('')||'<span style="color:#64748b">未识别</span>';
+  $('icFp').innerHTML=fps;
+  const exps=(intel.exposures||[]).map(x=>'<span class="tag warn">'+esc(x)+'</span>').join('')||'<span style="color:#64748b">未发现</span>';
+  $('icExp').innerHTML=exps;
+  const doors=(intel.entrypoints||[]);
+  $('icDoors').innerHTML=doors.length?doors.map(d=>{
+    const kind=d.type==='login'?'🔐':'📝';
+    const meta=[d.url||d.action||d.method].filter(Boolean).join(' ');
+    return `<button class="door-btn" data-sel="${esc(d.selector)}" data-label="${esc(d.label)}">${kind} ${esc(d.label)}</button><span class="door-meta">${esc(meta)}</span>`;
+  }).join(''):'<span style="color:#64748b">未发现</span>';
+  // bind door click -> interact in live browser
+  document.querySelectorAll('.door-btn').forEach(b=>b.onclick=()=>interactDoor(b.dataset.sel, b.dataset.label));
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+async function interactDoor(selector, label){
+  if(!curUrl||loading) return;
+  loading=true; document.body.classList.add('loading');
+  $('cur').textContent='正在真实浏览器中点击「'+label+'」…';
+  try{
+    const d=await api('/api/live/interact',{url:curUrl,selector});
+    if(typeof d.html==='string' && d.html.length) lastHtml=d.html;
+    else lastHtml='';
+    $('cur').textContent=d.url||curUrl;
+    showAssetBar(d.url||curUrl);
+    renderIntel(d.intel);
+    addStep({a:'interact',t:'点击入口「'+label+'」→ '+(d.clicked?d.clicked.tag:'')});
+  }catch(e){ $('cur').textContent='交互失败: '+e.message; }
+  loading=false; document.body.classList.remove('loading');
+}
+async function askAgent(){
+  const prompt=($('aiInput').value||'').trim();
+  if(!curUrl||!prompt||loading) return;
+  loading=true; document.body.classList.add('loading');
+  $('aiThinking').style.display='block';
+  $('aiResult').style.display='none';
+  addStep({a:'ask',t:'🤖 '+prompt});
+  try{
+    const d=await api('/api/live/ask',{url:curUrl,prompt});
+    $('aiAnswer').textContent='🤖 '+d.answer;
+    const st=document.getElementById('aiSteps');
+    st.innerHTML=(d.steps||[]).map(s=>{
+      const ok=s.ok?'ok':'bad';
+      const extra=s.clicked?(' clicked '+s.clicked.tag):(s.intel?(' '+Object.keys(s.intel||{}).join('/')):'');
+      return '<div class="'+ok+'">· '+s.op+extra+(s.error?' ✗ '+s.error:'')+'</div>';
+    }).join('');
+    $('aiResult').style.display='block';
+    addStep({a:'done',t:'AI 完成: '+(d.answer||'').slice(0,80)});
+    // refresh content view after agent actions
+    act('snapshot',{findKeys:false});
+  }catch(e){
+    $('aiAnswer').textContent='AI 助手执行失败: '+e.message;
+    $('aiResult').style.display='block';
+    addStep({a:'ask',t:'AI 执行失败: '+e.message});
+  }
+  $('aiThinking').style.display='none';
+  loading=false; document.body.classList.remove('loading');
+}
+$('btnAsk').onclick=askAgent;
+$('aiInput').addEventListener('keydown',e=>{ if(e.key==='Enter') askAgent(); });
+function setTab(on){
+  ['tabText','tabLinks','tabHtml'].forEach(t=>$(t).className='tab'+(t===on?' on':''));
+}
+function switchContentView(tab){
+  ['textPanel','linksPanel','domPanel'].forEach(p=>$(p).style.display='none');
+  $(tab==='links'?'linksPanel':tab==='html'?'domPanel':'textPanel').style.display='block';
+}
+function renderText(){
+  const txt=htmlToText(lastHtml);
+  $('textPre').textContent=txt?txt:'(页面暂无可见文本内容 — 可点「重新抓取内容」或切换「链接 / HTML 源码」查看)';
+}
+function renderLinks(){
+  const box=$('linksBox'); box.innerHTML='';
+  const links=htmlToLinks(lastHtml);
+  if(!links.length){ box.innerHTML='<div class="links-empty">(页面中未发现链接)</div>'; return; }
+  links.forEach(l=>{
+    const a=document.createElement('a');
+    a.href=l; a.target='_blank'; a.rel='noopener'; a.textContent=l;
+    box.appendChild(a);
+  });
+}
+function htmlToText(html){
+  if(!html) return '';
+  const d=new DOMParser().parseFromString(html,'text/html');
+  return (d.body?d.body.textContent:'').replace(/\s+/g,' ').trim().slice(0,20000);
+}
+function htmlToLinks(html){
+  if(!html) return [];
+  const d=new DOMParser().parseFromString(html,'text/html');
+  const out=[];
+  (d.querySelectorAll('a[href]')||[]).forEach(a=>{
+    const h=a.href;
+    if(h && h.startsWith('http') && !out.includes(h)) out.push(h);
+  });
+  return out.slice(0,200);
+}
+async function openAsset(url){
+  if(loading) return;
+  curUrl=url; cur=null; lastHtml=''; renderList();
+  hideAll();
+  $('cur').textContent='正在访问 '+url+' …'; $('guide').style.display='block';
+  loading=true; document.body.classList.add('loading');
+  try{
+    const d=await api('/api/live/open',{url});
+    cur=d.session;
+    $('cur').textContent=d.session.current||url;
+    $('btnCloseTop').style.display='';
+    addStep({a:'open',t:'打开 '+url,url:d.session.current});
+    loading=false; document.body.classList.remove('loading');
+    showAssetBar(d.session.current||url);
+    // 自动抓取目标页面真实内容
+    act('snapshot',{findKeys:false});
+  }catch(e){ $('cur').textContent='访问失败: '+e.message; loading=false; document.body.classList.remove('loading'); }
+}
+async function act(act, payload){
+  if(!curUrl||loading) return;
+  loading=true; document.body.classList.add('loading');
+  try{
+    const d=await api('/api/live/'+act, Object.assign({url:curUrl},payload));
+    if(act==='snapshot'){
+      if(typeof d.html==='string' && d.html.length) lastHtml=d.html;
+      else lastHtml='';
+      showAssetBar(d.url||curUrl);
+      renderIntel(d.intel);
+      addStep({a:'refresh',t:'抓取页面内容'});
+    } else {
+      showAssetBar(d.current||curUrl);
+    }
+    if(d.current) $('cur').textContent=d.current;
+    if(d.step) addStep(d.step);
+  }catch(e){ $('cur').textContent='操作失败: '+e.message; }
+  loading=false; document.body.classList.remove('loading');
+}
+function addStep(s){
+  const box=$('steps');
+  const el=document.createElement('div');
+  el.className='step';
+  el.innerHTML=`<div class="a">${s.a}</div><div>${s.t||''}</div><div class="t">${s.url||''} ${s.at||''}</div>`;
+  box.appendChild(el); box.scrollTop=box.scrollHeight;
+  if(box.children.length>200) box.firstChild.remove();
+}
+$('viewport').addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(!curUrl) return;
+  act('scroll',{dx:0,dy:e.deltaY>0?400:-400});
+},{passive:false});
+async function closeSession(){
+  if(!curUrl) return;
+  try{ await api('/api/live/close',{url:curUrl}); }catch(e){}
+  curUrl=''; $('btnCloseTop').style.display='none';
+  $('cur').textContent='未选择资产 — 从左侧选择一个目标开始测绘';
+  hideAll(); $('guide').style.display='block';
+  $('steps').innerHTML='<div class="step">等待操作…</div>';
+  renderList();
+}
+$('btnCloseTop').onclick=closeSession;
+const bindRefresh=(id)=>$(id).onclick=()=>act('snapshot',{findKeys:false});
+bindRefresh('btnScan'); bindRefresh('btnScan2');
+$('btnTop').onclick=()=>act('scroll',{dx:0,dy:-99999});
+$('btnBottom').onclick=()=>act('scroll',{dx:0,dy:99999});
+$('btnTop2').onclick=()=>act('scroll',{dx:0,dy:-99999});
+$('btnBottom2').onclick=()=>act('scroll',{dx:0,dy:99999});
+const bindExport=(id)=>$(id).onclick=async()=>{
+  if(!curUrl) return;
+  try{
+    const d=await api('/api/live/trace',{url:curUrl});
+    const blob=new Blob([JSON.stringify(d.trace,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=curUrl.replace(/[^a-zA-Z0-9]/g,'_')+'-trace.json'; a.click();
+  }catch(e){ alert('导出失败: '+e.message); }
+};
+bindExport('btnExport'); bindExport('btnExport2');
+const bindReport=(id)=>$(id).onclick=async()=>{
+  if(!curUrl) return;
+  try{
+    const r=await fetch('/api/live/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:curUrl})});
+    if(!r.ok) throw new Error((await r.text()).slice(0,200));
+    const html=await r.text();
+    const blob=new Blob([html],{type:'text/html'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=curUrl.replace(/[^a-zA-Z0-9]/g,'_')+'-intel.html'; a.click();
+    curUrl=''; $('btnCloseTop').style.display='none';
+    $('cur').textContent='报告已生成，会话已关闭';
+    hideAll(); $('guide').style.display='block';
+    $('steps').innerHTML='<div class="step">会话已关闭，生成情报报告</div>';
+    renderList();
+  }catch(e){ alert('报告失败: '+e.message); }
+};
+bindReport('btnReport'); bindReport('btnReport2');
+$('tabText').onclick=()=>{setTab('tabText');switchContentView('text');renderText();};
+$('tabLinks').onclick=()=>{setTab('tabLinks');switchContentView('links');renderLinks();};
+$('tabHtml').onclick=()=>{setTab('tabHtml');switchContentView('html');$('domPre').textContent=lastHtml||'(无内容)';};
+$('search').addEventListener('input',renderList);
+$('btnGuideTop').onclick=()=>{ if(curUrl){ try{api('/api/live/close',{url:curUrl});}catch(e){} curUrl=''; $('btnCloseTop').style.display='none'; $('steps').innerHTML='<div class="step">等待操作…</div>'; } hideAll(); $('guide').style.display='block'; $('cur').textContent='未选择资产 — 从左侧选择一个目标开始测绘'; };
+loadAssets();
+</script></body></html>
